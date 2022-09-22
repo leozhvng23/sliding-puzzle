@@ -5,6 +5,7 @@ from collections import deque
 import sys
 import math
 import time
+import resource
 
 # import queue as Q
 
@@ -64,16 +65,16 @@ class PuzzleState(object):
             return None
 
         # switch position
-        newpos = self.blank_index - self.n
-        newConfig = list(self.config)
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
+        new_pos = self.blank_index - self.n
+        new_config = list(self.config)
+        new_config[self.blank_index], new_config[new_pos] = new_config[new_pos], "0"
         # create new state
-        newState = PuzzleState(
-            "".join(newConfig), self.n, self, "Up", self.cost + 1, newpos
+        new_state = PuzzleState(
+            "".join(new_config), self.n, self, "Up", self.cost + 1, new_pos
         )
-        self.children.append(newState)
+        self.children.append(new_state)
 
-        return newState
+        return new_state
 
     def move_down(self):
         """
@@ -84,16 +85,19 @@ class PuzzleState(object):
             return None
 
         # switch position
-        newpos = self.blank_index + self.n
-        newConfig = list(self.config)
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
-        # create new state
-        newState = PuzzleState(
-            "".join(newConfig), self.n, self, "Down", self.cost + 1, newpos
+        new_position = self.blank_index + self.n
+        new_config = list(self.config)
+        new_config[self.blank_index], new_config[new_position] = (
+            new_config[new_position],
+            "0",
         )
-        self.children.append(newState)
+        # create new state
+        new_state = PuzzleState(
+            "".join(new_config), self.n, self, "Down", self.cost + 1, new_position
+        )
+        self.children.append(new_state)
 
-        return newState
+        return new_state
 
     def move_left(self):
         """
@@ -104,16 +108,19 @@ class PuzzleState(object):
             return None
 
         # switch position
-        newpos = self.blank_index - 1
-        newConfig = list(self.config)
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
-        # create new state
-        newState = PuzzleState(
-            "".join(newConfig), self.n, self, "Left", self.cost + 1, newpos
+        new_position = self.blank_index - 1
+        new_config = list(self.config)
+        new_config[self.blank_index], new_config[new_position] = (
+            new_config[new_position],
+            "0",
         )
-        self.children.append(newState)
+        # create new state
+        new_state = PuzzleState(
+            "".join(new_config), self.n, self, "Left", self.cost + 1, new_position
+        )
+        self.children.append(new_state)
 
-        return newState
+        return new_state
 
     def move_right(self):
         """
@@ -125,15 +132,15 @@ class PuzzleState(object):
 
         # switch position
         newpos = self.blank_index + 1
-        newConfig = list(self.config)
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
+        new_config = list(self.config)
+        new_config[self.blank_index], new_config[newpos] = new_config[newpos], "0"
         # create new state
-        newState = PuzzleState(
-            "".join(newConfig), self.n, self, "Right", self.cost + 1, newpos
+        new_state = PuzzleState(
+            "".join(new_config), self.n, self, "Right", self.cost + 1, newpos
         )
-        self.children.append(newState)
+        self.children.append(new_state)
 
-        return newState
+        return new_state
 
     def expand(self):
         """Generate the child nodes of this node"""
@@ -155,23 +162,89 @@ class PuzzleState(object):
         return self.children
 
 
-# Function that Writes to output.txt
+goal_state = ""
 
-### Students need to change the method to have the corresponding parameters
-def writeOutput():
-    ### Student Code Goes here
-    pass
+# Function that Writes to output.txt
+def getPath(puzzle_state):
+    path = []
+    current_state = puzzle_state
+    while current_state.parent:
+        path.append(current_state.action)
+        current_state = current_state.parent
+
+    path.reverse()
+    return path
+
+
+def writeOutput(
+    current_state,
+    nodes_expanded,
+    search_depth,
+    max_search_depth,
+    running_time,
+    max_ram_usage,
+):
+    path_to_goal = getPath(current_state)
+    cost_of_path = str(current_state.cost)
+
+    f = open("result.txt", "w")
+    print("path_to_goal:", path_to_goal, file=f)
+    f.write("cost_of_path: " + cost_of_path + "\n")
+    f.write("nodes_expanded: " + nodes_expanded + "\n")
+    f.write("search_depth: " + search_depth + "\n")
+    f.write("max_search_depth: " + max_search_depth + "\n")
+    f.write("running_time: " + running_time + "\n")
+    f.write("max_ram_usage: " + max_ram_usage + "\n")
+
+    f.close()
+
+    f = open("result.txt", "r")
+    print(f.read())
+    current_state.display()
 
 
 def bfs_search(initial_state):
     """BFS search"""
-    goal = "".join([str(x) for x in range(initial_state.n * initial_state.n)])
-    print(goal)
-    if initial_state.config == goal:
+
+    """
+    if initial_state.config == goal_state:
         print("found!")
         return
+    """
+    start_ram = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    running_time = max_ram_usage = max_search_depth = search_depth = 0
+    start_time = time.time()
 
-    q = deque(initial_state.config)
+    visited = set()
+    q = deque([initial_state])
+    current_state = None
+
+    while q:
+        for _ in range(len(q)):
+            current_state = q.popleft()
+            if test_goal(current_state):
+                running_time = time.time() - start_time
+                max_search_depth = search_depth if not q else search_depth + 1
+                max_ram_usage = (
+                    resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram
+                ) / (2**20)
+                writeOutput(
+                    current_state,
+                    str(len(visited)),
+                    str(search_depth),
+                    str(max_search_depth),
+                    str(running_time),
+                    str(max_ram_usage),
+                )
+
+                return
+            if current_state.config not in visited:
+                visited.add(current_state.config)
+                children = current_state.expand()
+                for child in children:
+                    q.append(child)
+        search_depth += 1
+    print("Could not solve puzzle")
 
 
 def dfs_search(initial_state):
@@ -201,14 +274,16 @@ def calculate_manhattan_dist(idx, value, n):
 def test_goal(puzzle_state):
     """test the state is the goal state or not"""
     ### STUDENT CODE GOES HERE ###
-    pass
+    return puzzle_state.config == goal_state
 
 
 # Main Function that reads in Input and Runs corresponding Algorithm
 def main():
+    global goal_state
     search_mode = sys.argv[1].lower()
     begin_state = sys.argv[2].replace(",", "")
     board_size = int(math.sqrt(len(begin_state)))
+    goal_state = "".join([str(x) for x in range(board_size * board_size)])
 
     # check if input is valid
     if set(map(int, sys.argv[2].split(","))) != set(range(board_size * board_size)):
@@ -228,10 +303,10 @@ def main():
     # for debugging
     elif search_mode == "test":
         hard_state.display()
-        newState = hard_state.move_right()
-        if newState:
+        new_state = hard_state.move_right()
+        if new_state:
             print("moved up")
-            newState.display()
+            new_state.display()
         else:
             print("could not move up")
 
