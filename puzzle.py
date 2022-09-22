@@ -15,13 +15,21 @@ class PuzzleState(object):
     movement instructions to generate valid children.
     """
 
-    def __init__(self, config, n, parent=None, action="Initial", cost=0):
+    # target puzzle state:
+    # idx: 0, 1, 2, 3, 4, 5, 6, 7, 8
+    # val:[0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+    def __init__(
+        self, config, n, parent=None, action="Initial", cost=0, blank_index=-1
+    ):
         """
         :param config->List : Represents the n*n board, for e.g. [0,1,2,3,4,5,6,7,8] represents the goal state.
         :param n->int : Size of the board
         :param parent->PuzzleState
         :param action->string
         :param cost->int
+        :param position->List: Represents the relative position of each index number
+        :param blank_index->int: Index of the empty block
         """
         if n * n != len(config) or n < 2:
             raise Exception("The length of config is not correct!")
@@ -34,12 +42,12 @@ class PuzzleState(object):
         self.action = action
         self.config = config
         self.children = []
-
         # Get the index and (row, col) of empty block
-        self.blank_index = self.config.index(0)
+        self.blank_index = blank_index if blank_index > -1 else self.config.index(0)
 
     def display(self):
         """Display this Puzzle state as a n*n board"""
+        # need to change this to new format
         for i in range(self.n):
             print(self.config[3 * i : 3 * (i + 1)])
 
@@ -48,28 +56,72 @@ class PuzzleState(object):
         Moves the blank tile one row up.
         :return a PuzzleState with the new configuration
         """
-        pass
+        if self.blank_index < self.n:
+            return None
+
+        # switch position
+        newpos = self.blank_index - self.n
+        newConfig = self.config[:]
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        # create new state
+        newState = PuzzleState(newConfig, self.n, self, "Up", self.cost + 1, newpos)
+        self.children.append(newState)
+
+        return newState
 
     def move_down(self):
         """
         Moves the blank tile one row down.
         :return a PuzzleState with the new configuration
         """
-        pass
+        if len(self.config) - self.blank_index <= self.n:
+            return None
+
+        # switch position
+        newpos = self.blank_index + self.n
+        newConfig = self.config[:]
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        # create new state
+        newState = PuzzleState(newConfig, self.n, self, "Down", self.cost + 1, newpos)
+        self.children.append(newState)
+
+        return newState
 
     def move_left(self):
         """
         Moves the blank tile one column to the left.
         :return a PuzzleState with the new configuration
         """
-        pass
+        if self.blank_index % self.n == 0:
+            return None
+
+        # switch position
+        newpos = self.blank_index - 1
+        newConfig = self.config[:]
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        # create new state
+        newState = PuzzleState(newConfig, self.n, self, "Left", self.cost + 1, newpos)
+        self.children.append(newState)
+
+        return newState
 
     def move_right(self):
         """
         Moves the blank tile one column to the right.
         :return a PuzzleState with the new configuration
         """
-        pass
+        if (self.blank_index + 1) % self.n == 0:
+            return None
+
+        # switch position
+        newpos = self.blank_index + 1
+        newConfig = self.config[:]
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        # create new state
+        newState = PuzzleState(newConfig, self.n, self, "Right", self.cost + 1, newpos)
+        self.children.append(newState)
+
+        return newState
 
     def expand(self):
         """Generate the child nodes of this node"""
@@ -150,6 +202,15 @@ def main():
         dfs_search(hard_state)
     elif search_mode == "ast":
         A_star_search(hard_state)
+    # for debugging
+    elif search_mode == "test":
+        hard_state.display()
+        newState = hard_state.move_right()
+        if newState:
+            print("moved 0 right")
+            newState.display()
+        else:
+            print("cannot move right")
     else:
         print("Enter valid command arguments !")
 
