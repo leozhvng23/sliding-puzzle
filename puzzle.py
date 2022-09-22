@@ -1,10 +1,12 @@
 from __future__ import division
 from __future__ import print_function
+from collections import deque
 
 import sys
 import math
 import time
-import queue as Q
+
+# import queue as Q
 
 
 #### SKELETON CODE ####
@@ -23,18 +25,18 @@ class PuzzleState(object):
         self, config, n, parent=None, action="Initial", cost=0, blank_index=-1
     ):
         """
-        :param config->List : Represents the n*n board, for e.g. [0,1,2,3,4,5,6,7,8] represents the goal state.
+        :param config->str: Represents the n*n board, for e.g. [0,1,2,3,4,5,6,7,8] represents the goal state.
         :param n->int : Size of the board
         :param parent->PuzzleState
         :param action->string
         :param cost->int
-        :param position->List: Represents the relative position of each index number
         :param blank_index->int: Index of the empty block
         """
         if n * n != len(config) or n < 2:
             raise Exception("The length of config is not correct!")
-        if set(config) != set(range(n * n)):
-            raise Exception("Config contains invalid/duplicate entries : ", config)
+
+        # if set(config) != set(range(n * n)):
+        #     raise Exception("Config contains invalid/duplicate entries : ", config)
 
         self.n = n
         self.cost = cost
@@ -43,13 +45,15 @@ class PuzzleState(object):
         self.config = config
         self.children = []
         # Get the index and (row, col) of empty block
-        self.blank_index = blank_index if blank_index > -1 else self.config.index(0)
+        self.blank_index = blank_index if blank_index > -1 else self.config.index("0")
 
     def display(self):
         """Display this Puzzle state as a n*n board"""
         # need to change this to new format
+        tmp = list(int(c) for c in self.config)
+
         for i in range(self.n):
-            print(self.config[3 * i : 3 * (i + 1)])
+            print(tmp[self.n * i : self.n * (i + 1)])
 
     def move_up(self):
         """
@@ -61,10 +65,12 @@ class PuzzleState(object):
 
         # switch position
         newpos = self.blank_index - self.n
-        newConfig = self.config[:]
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        newConfig = list(self.config)
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
         # create new state
-        newState = PuzzleState(newConfig, self.n, self, "Up", self.cost + 1, newpos)
+        newState = PuzzleState(
+            "".join(newConfig), self.n, self, "Up", self.cost + 1, newpos
+        )
         self.children.append(newState)
 
         return newState
@@ -79,10 +85,12 @@ class PuzzleState(object):
 
         # switch position
         newpos = self.blank_index + self.n
-        newConfig = self.config[:]
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        newConfig = list(self.config)
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
         # create new state
-        newState = PuzzleState(newConfig, self.n, self, "Down", self.cost + 1, newpos)
+        newState = PuzzleState(
+            "".join(newConfig), self.n, self, "Down", self.cost + 1, newpos
+        )
         self.children.append(newState)
 
         return newState
@@ -97,10 +105,12 @@ class PuzzleState(object):
 
         # switch position
         newpos = self.blank_index - 1
-        newConfig = self.config[:]
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        newConfig = list(self.config)
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
         # create new state
-        newState = PuzzleState(newConfig, self.n, self, "Left", self.cost + 1, newpos)
+        newState = PuzzleState(
+            "".join(newConfig), self.n, self, "Left", self.cost + 1, newpos
+        )
         self.children.append(newState)
 
         return newState
@@ -115,10 +125,12 @@ class PuzzleState(object):
 
         # switch position
         newpos = self.blank_index + 1
-        newConfig = self.config[:]
-        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], 0
+        newConfig = list(self.config)
+        newConfig[self.blank_index], newConfig[newpos] = newConfig[newpos], "0"
         # create new state
-        newState = PuzzleState(newConfig, self.n, self, "Right", self.cost + 1, newpos)
+        newState = PuzzleState(
+            "".join(newConfig), self.n, self, "Right", self.cost + 1, newpos
+        )
         self.children.append(newState)
 
         return newState
@@ -153,8 +165,13 @@ def writeOutput():
 
 def bfs_search(initial_state):
     """BFS search"""
-    ### STUDENT CODE GOES HERE ###
-    pass
+    goal = "".join([str(x) for x in range(initial_state.n * initial_state.n)])
+    print(goal)
+    if initial_state.config == goal:
+        print("found!")
+        return
+
+    q = deque(initial_state.config)
 
 
 def dfs_search(initial_state):
@@ -190,9 +207,15 @@ def test_goal(puzzle_state):
 # Main Function that reads in Input and Runs corresponding Algorithm
 def main():
     search_mode = sys.argv[1].lower()
-    begin_state = sys.argv[2].split(",")
-    begin_state = list(map(int, begin_state))
+    begin_state = sys.argv[2].replace(",", "")
     board_size = int(math.sqrt(len(begin_state)))
+
+    # check if input is valid
+    if set(map(int, sys.argv[2].split(","))) != set(range(board_size * board_size)):
+        raise Exception(
+            "Config contains invalid/duplicate entries : ", sys.argv[2].split(",")
+        )
+
     hard_state = PuzzleState(begin_state, board_size)
     start_time = time.time()
 
@@ -207,12 +230,10 @@ def main():
         hard_state.display()
         newState = hard_state.move_right()
         if newState:
-            print("moved 0 right")
+            print("moved up")
             newState.display()
         else:
-            print("cannot move right")
-    else:
-        print("Enter valid command arguments !")
+            print("could not move up")
 
     end_time = time.time()
     print("Program completed in %.3f second(s)" % (end_time - start_time))
