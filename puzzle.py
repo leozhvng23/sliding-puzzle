@@ -249,8 +249,45 @@ def bfs_search(initial_state):
 
 def dfs_search(initial_state):
     """DFS search"""
-    ### STUDENT CODE GOES HERE ###
-    pass
+    start_ram = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    nodes_expanded = max_search_depth = search_depth = 0
+    start_time = time.time()
+
+    stack = deque()
+    stack.append([initial_state, 0])
+    visited = set()
+    final_state, final_cost = None, float("inf")
+
+    while len(stack):
+        current_state, search_depth = stack.pop()
+        visited.add(current_state.config)
+        max_search_depth = max(max_search_depth, search_depth)
+        if test_goal(current_state):
+            if current_state.cost < final_cost:
+                final_state, final_cost = current_state, current_state.cost
+            """
+            if search depth is same as manhattan distance then return 
+            """
+
+        children = current_state.expand()
+        nodes_expanded += 1
+        for i in reversed(range(len(children))):
+            if children[i].config not in visited:
+                stack.append([children[i], search_depth + 1])
+
+    running_time = time.time() - start_time
+    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
+        2**20
+    )
+    writeOutput(
+        final_state,
+        str(nodes_expanded),
+        str(search_depth),
+        str(max_search_depth),
+        str(running_time),
+        str(max_ram_usage),
+    )
+    return
 
 
 def A_star_search(initial_state):
