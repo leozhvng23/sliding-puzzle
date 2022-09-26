@@ -206,87 +206,85 @@ def writeOutput(
 def bfs_search(initial_state):
     """BFS search"""
 
-    """
-    if initial_state.config == goal_state:
-        print("found!")
-        return
-    """
-    start_ram = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    running_time = max_ram_usage = max_search_depth = search_depth = 0
-    start_time = time.time()
-
-    visited = set()
-    q = deque([initial_state])
-    current_state = None
+    start_ram, start_time = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        time.time(),
+    )
+    q, visited = deque([initial_state]), set()
+    current_state, found, search_depth = None, False, 0
 
     while q:
         for _ in range(len(q)):
             current_state = q.popleft()
             if test_goal(current_state):
-                running_time = time.time() - start_time
-                max_search_depth = search_depth if not q else search_depth + 1
-                max_ram_usage = (
-                    resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram
-                ) / (2**20)
-                writeOutput(
-                    current_state,
-                    str(len(visited)),
-                    str(search_depth),
-                    str(max_search_depth),
-                    str(running_time),
-                    str(max_ram_usage),
-                )
-
-                return
+                found = True
+                break
             if current_state.config not in visited:
                 visited.add(current_state.config)
                 children = current_state.expand()
                 for child in children:
                     q.append(child)
+        if found:
+            break
         search_depth += 1
-    print("Could not solve puzzle")
+
+    running_time = time.time() - start_time
+    max_search_depth = search_depth if not q else search_depth + 1
+    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
+        2**20
+    )
+    if not current_state:
+        print("Could not found puzzle!")
+    else:
+        writeOutput(
+            current_state,
+            str(len(visited)),
+            str(search_depth),
+            str(max_search_depth),
+            str(running_time),
+            str(max_ram_usage),
+        )
+
+    return
 
 
 def dfs_search(initial_state):
     """DFS search"""
-    start_ram = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    nodes_expanded = max_search_depth = search_depth = 0
-    start_time = time.time()
+    start_ram, start_time = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        time.time(),
+    )
+    nodes_expanded = max_search_depth = 0
+    stack, visited, current_state = deque([initial_state]), set(), None
 
-    stack = deque()
-    stack.append([initial_state, 0])
-    visited = set()
-    final_state, final_cost = None, float("inf")
-
-    while len(stack):
-        current_state, search_depth = stack.pop()
+    while stack:
+        current_state = stack.pop()
         visited.add(current_state.config)
-        max_search_depth = max(max_search_depth, search_depth)
+        max_search_depth = max(max_search_depth, current_state.cost)
         if test_goal(current_state):
-            if current_state.cost < final_cost:
-                final_state, final_cost = current_state, current_state.cost
-            """
-            if search depth is same as manhattan distance then return 
-            """
+            break
 
-        children = current_state.expand()
+        for child in reversed(current_state.expand()):
+            if child.config not in visited:
+                stack.append(child)
+                visited.add(child.config)
         nodes_expanded += 1
-        for i in reversed(range(len(children))):
-            if children[i].config not in visited:
-                stack.append([children[i], search_depth + 1])
 
     running_time = time.time() - start_time
     max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
         2**20
     )
-    writeOutput(
-        final_state,
-        str(nodes_expanded),
-        str(search_depth),
-        str(max_search_depth),
-        str(running_time),
-        str(max_ram_usage),
-    )
+    if not current_state:
+        print("Could not solve puzzle!")
+    else:
+        writeOutput(
+            current_state,
+            str(nodes_expanded),
+            str(current_state.cost),
+            str(max_search_depth),
+            str(running_time),
+            str(max_ram_usage),
+        )
     return
 
 
