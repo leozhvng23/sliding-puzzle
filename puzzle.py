@@ -1,26 +1,43 @@
 from __future__ import division
 from __future__ import print_function
 from collections import deque
+import heapq
 
 import sys
 import math
 import time
 import resource
 
-# import queue as Q
+### Custom Min-heap Data Structure
+class PrioritySet(object):
+    """
+    A min-heap data structure storing unique values
+    """
+
+    def __init__(self):
+        self.heap = []
+        self.set = set()
+
+    def add(self, item):
+        if not item in self.set:
+            heapq.heappush(self.heap, item)
+            self.set.add(item)
+
+    def check(self, item):
+        return item in self.set
+
+    def get(self):
+        item = heapq.heappop(self.heap)
+        self.set.remove(item)
+        return item
 
 
-#### SKELETON CODE ####
 ## The Class that Represents the Puzzle
 class PuzzleState(object):
     """
     The PuzzleState stores a board configuration and implements
     movement instructions to generate valid children.
     """
-
-    # target puzzle state:
-    # idx: 0, 1, 2, 3, 4, 5, 6, 7, 8
-    # val:[0, 1, 2, 3, 4, 5, 6, 7, 8]
 
     def __init__(
         self, config, n, parent=None, action="Initial", cost=0, blank_index=-1
@@ -35,9 +52,6 @@ class PuzzleState(object):
         """
         if n * n != len(config) or n < 2:
             raise Exception("The length of config is not correct!")
-
-        # if set(config) != set(range(n * n)):
-        #     raise Exception("Config contains invalid/duplicate entries : ", config)
 
         self.n = n
         self.cost = cost
@@ -161,8 +175,6 @@ class PuzzleState(object):
         self.children = [state for state in children if state is not None]
         return self.children
 
-
-goal_state = ""
 
 # Function that Writes to output.txt
 def getPath(puzzle_state):
@@ -290,7 +302,7 @@ def dfs_search(initial_state):
 
 def A_star_search(initial_state):
     """A * search"""
-    ### STUDENT CODE GOES HERE ###
+
     pass
 
 
@@ -312,6 +324,7 @@ def test_goal(puzzle_state):
     return puzzle_state.config == goal_state
 
 
+goal_state = ""
 # Main Function that reads in Input and Runs corresponding Algorithm
 def main():
     global goal_state
@@ -335,16 +348,6 @@ def main():
         dfs_search(hard_state)
     elif search_mode == "ast":
         A_star_search(hard_state)
-    # for debugging
-    elif search_mode == "test":
-        hard_state.display()
-        new_state = hard_state.move_right()
-        if new_state:
-            print("moved up")
-            new_state.display()
-        else:
-            print("could not move up")
-
     end_time = time.time()
     print("Program completed in %.3f second(s)" % (end_time - start_time))
 
