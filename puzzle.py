@@ -16,20 +16,22 @@ class PrioritySet(object):
 
     def __init__(self):
         self.heap = []
-        self.set = set()
+        self.store = set()
 
     def add(self, item):
-        if not item in self.set:
-            heapq.heappush(self.heap, item)
-            self.set.add(item)
-
-    def check(self, item):
-        return item in self.set
+        heapq.heappush(self.heap, item)
+        self.store.add(item[1].config)
 
     def get(self):
         item = heapq.heappop(self.heap)
-        self.set.remove(item)
+        self.store.remove(item[1].config)
         return item
+
+    def __contains__(self, item):
+        return item.config in self.store
+
+    def isEmpty(self):
+        return len(self.heap) == 0
 
 
 ## The Class that Represents the Puzzle
@@ -61,6 +63,9 @@ class PuzzleState(object):
         self.children = []
         # Get the index and (row, col) of empty block
         self.blank_index = blank_index if blank_index > -1 else self.config.index("0")
+
+    def __lt__(self, other):
+        return self.cost < other.cost
 
     def display(self):
         """Display this Puzzle state as a n*n board"""
@@ -267,19 +272,19 @@ def dfs_search(initial_state):
         time.time(),
     )
     nodes_expanded = max_search_depth = 0
-    stack, visited, current_state = deque([initial_state]), set(), None
+    stack, explored, current_state = deque([initial_state]), set(), None
 
     while stack:
         current_state = stack.pop()
-        visited.add(current_state.config)
+        explored.add(current_state.config)
         max_search_depth = max(max_search_depth, current_state.cost)
         if test_goal(current_state):
             break
 
         for child in reversed(current_state.expand()):
-            if child.config not in visited:
+            if child.config not in explored:
                 stack.append(child)
-                visited.add(child.config)
+                explored.add(child.config)
         nodes_expanded += 1
 
     running_time = time.time() - start_time
@@ -302,20 +307,63 @@ def dfs_search(initial_state):
 
 def A_star_search(initial_state):
     """A * search"""
+    start_ram, start_time = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        time.time(),
+    )
+    nodes_expanded = max_search_depth = 0
+    frontier, explored, current_state = PrioritySet(), set(), None
+    frontier.add((0, initial_state))
 
-    pass
+    while frontier:
+        _, current_state = frontier.get()
+
+        explored.add(current_state.config)
+
+        if test_goal(current_state):
+            break
+
+        for child in current_state.expand():
+            if child.config not in explored:
+                explored.add(child.config)
+                estimated_cost = calculate_total_cost(child) + child.cost
+                frontier.add((estimated_cost, child))
+
+        nodes_expanded += 1
+
+    running_time = time.time() - start_time
+    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
+        2**20
+    )
+    if not current_state:
+        print("Could not solve puzzle!")
+    else:
+        search_depth = current_state.cost
+        writeOutput(
+            current_state,
+            str(nodes_expanded),
+            str(search_depth),
+            str(max_search_depth),
+            str(running_time),
+            str(max_ram_usage),
+        )
+    return
 
 
 def calculate_total_cost(state):
     """calculate the total estimated cost of a state"""
-    ### STUDENT CODE GOES HERE ###
-    pass
+    estimated_cost = 0
+    for idx, value in enumerate(state.config):
+        if value == "0":
+            continue
+        estimated_cost += calculate_manhattan_dist(idx, int(value), state.n)
+    return estimated_cost
 
 
 def calculate_manhattan_dist(idx, value, n):
     """calculate the manhattan distance of a tile"""
-    ### STUDENT CODE GOES HERE ###
-    pass
+
+    return abs(value - idx) // n + abs(value - idx) % n
 
 
 def test_goal(puzzle_state):
