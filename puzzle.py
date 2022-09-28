@@ -1,38 +1,12 @@
 from __future__ import division
 from __future__ import print_function
 from collections import deque
-import heapq
 
+import heapq
 import sys
 import math
 import time
 import resource
-
-### Custom Min-heap Data Structure
-class PrioritySet(object):
-    """
-    A min-heap data structure storing unique values
-    """
-
-    def __init__(self):
-        self.heap = []
-        self.store = set()
-
-    def add(self, item):
-        heapq.heappush(self.heap, item)
-        self.store.add(item[1].config)
-
-    def get(self):
-        item = heapq.heappop(self.heap)
-        self.store.remove(item[1].config)
-        return item
-
-    def __contains__(self, item):
-        return item.config in self.store
-
-    def isEmpty(self):
-        return len(self.heap) == 0
-
 
 ## The Class that Represents the Puzzle
 class PuzzleState(object):
@@ -75,6 +49,19 @@ class PuzzleState(object):
         for i in range(self.n):
             print(tmp[self.n * i : self.n * (i + 1)])
 
+    def move_helper(self, position, move):
+        """
+        Helper function for move
+        :return a PuzzleState with the new configuration
+        """
+        new_config = list(self.config)
+        new_config[self.blank_index], new_config[position] = new_config[position], "0"
+        new_state = PuzzleState(
+            "".join(new_config), self.n, self, move, self.cost + 1, position
+        )
+        self.children.append(new_state)
+        return new_state
+
     def move_up(self):
         """
         Moves the blank tile one row up.
@@ -83,17 +70,7 @@ class PuzzleState(object):
         if self.blank_index < self.n:
             return None
 
-        # switch position
-        new_pos = self.blank_index - self.n
-        new_config = list(self.config)
-        new_config[self.blank_index], new_config[new_pos] = new_config[new_pos], "0"
-        # create new state
-        new_state = PuzzleState(
-            "".join(new_config), self.n, self, "Up", self.cost + 1, new_pos
-        )
-        self.children.append(new_state)
-
-        return new_state
+        return self.move_helper(self.blank_index - self.n, "Up")
 
     def move_down(self):
         """
@@ -103,20 +80,7 @@ class PuzzleState(object):
         if len(self.config) - self.blank_index <= self.n:
             return None
 
-        # switch position
-        new_position = self.blank_index + self.n
-        new_config = list(self.config)
-        new_config[self.blank_index], new_config[new_position] = (
-            new_config[new_position],
-            "0",
-        )
-        # create new state
-        new_state = PuzzleState(
-            "".join(new_config), self.n, self, "Down", self.cost + 1, new_position
-        )
-        self.children.append(new_state)
-
-        return new_state
+        return self.move_helper(self.blank_index + self.n, "Down")
 
     def move_left(self):
         """
@@ -126,20 +90,7 @@ class PuzzleState(object):
         if self.blank_index % self.n == 0:
             return None
 
-        # switch position
-        new_position = self.blank_index - 1
-        new_config = list(self.config)
-        new_config[self.blank_index], new_config[new_position] = (
-            new_config[new_position],
-            "0",
-        )
-        # create new state
-        new_state = PuzzleState(
-            "".join(new_config), self.n, self, "Left", self.cost + 1, new_position
-        )
-        self.children.append(new_state)
-
-        return new_state
+        return self.move_helper(self.blank_index - 1, "Left")
 
     def move_right(self):
         """
@@ -149,17 +100,7 @@ class PuzzleState(object):
         if (self.blank_index + 1) % self.n == 0:
             return None
 
-        # switch position
-        newpos = self.blank_index + 1
-        new_config = list(self.config)
-        new_config[self.blank_index], new_config[newpos] = new_config[newpos], "0"
-        # create new state
-        new_state = PuzzleState(
-            "".join(new_config), self.n, self, "Right", self.cost + 1, newpos
-        )
-        self.children.append(new_state)
-
-        return new_state
+        return self.move_helper(self.blank_index + 1, "Right")
 
     def expand(self):
         """Generate the child nodes of this node"""
@@ -181,8 +122,12 @@ class PuzzleState(object):
         return self.children
 
 
-# Function that Writes to output.txt
-def getPath(puzzle_state):
+def get_path(puzzle_state):
+    """
+    Reconstructs path to the final puzzle state
+    :return an array of moves ['Left', 'Right', ..., 'Up']
+    """
+
     path = []
     current_state = puzzle_state
     while current_state.parent:
@@ -193,170 +138,106 @@ def getPath(puzzle_state):
     return path
 
 
-def writeOutput(
-    current_state,
-    nodes_expanded,
-    search_depth,
-    max_search_depth,
-    running_time,
-    max_ram_usage,
-):
-    path_to_goal = getPath(current_state)
-    cost_of_path = str(current_state.cost)
+def write_output(results, running_time, max_ram_usage):
+    """Writes output to output.txt"""
 
-    f = open("result.txt", "w")
-    print("path_to_goal:", path_to_goal, file=f)
-    f.write("cost_of_path: " + cost_of_path + "\n")
-    f.write("nodes_expanded: " + nodes_expanded + "\n")
-    f.write("search_depth: " + search_depth + "\n")
-    f.write("max_search_depth: " + max_search_depth + "\n")
-    f.write("running_time: " + running_time + "\n")
-    f.write("max_ram_usage: " + max_ram_usage + "\n")
+    current_state, nodes_expanded, search_depth, max_search_depth = results
 
+    f = open("output.txt", "w")
+    print("path_to_goal:", get_path(current_state), file=f)
+    f.write("cost_of_path: " + str(current_state.cost) + "\n")
+    f.write("nodes_expanded: " + str(nodes_expanded) + "\n")
+    f.write("search_depth: " + str(search_depth) + "\n")
+    f.write("max_search_depth: " + str(max_search_depth) + "\n")
+    f.write("running_time: %.8f \n" % running_time)
+    f.write("max_ram_usage: %.8f \n" % max_ram_usage)
     f.close()
 
-    f = open("result.txt", "r")
-    print(f.read())
-    current_state.display()
+    return
 
 
 def bfs_search(initial_state):
     """BFS search"""
 
-    start_ram, start_time = (
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-        time.time(),
-    )
-    q, visited = deque([initial_state]), set()
+    frontier, explored = deque([initial_state]), set()
     current_state, found, search_depth = None, False, 0
 
-    while q:
-        for _ in range(len(q)):
-            current_state = q.popleft()
+    # level-order traversal BFS
+    while frontier:
+        for _ in range(len(frontier)):
+            current_state = frontier.popleft()
             if test_goal(current_state):
                 found = True
                 break
-            if current_state.config not in visited:
-                visited.add(current_state.config)
-                children = current_state.expand()
-                for child in children:
-                    q.append(child)
+            if current_state.config not in explored:
+                explored.add(current_state.config)
+                for child in current_state.expand():
+                    frontier.append(child)
         if found:
             break
         search_depth += 1
 
-    running_time = time.time() - start_time
-    max_search_depth = search_depth if not q else search_depth + 1
-    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
-        2**20
-    )
     if not current_state:
-        print("Could not found puzzle!")
-    else:
-        writeOutput(
-            current_state,
-            str(len(visited)),
-            str(search_depth),
-            str(max_search_depth),
-            str(running_time),
-            str(max_ram_usage),
-        )
-
-    return
+        return None
+    max_search_depth = search_depth if not frontier else search_depth + 1
+    return current_state, len(explored), search_depth, max_search_depth
 
 
 def dfs_search(initial_state):
     """DFS search"""
-    start_ram, start_time = (
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-        time.time(),
-    )
-    nodes_expanded = max_search_depth = 0
-    stack, explored, current_state = deque([initial_state]), set(), None
 
-    while stack:
-        current_state = stack.pop()
+    nodes_expanded = max_search_depth = 0
+    frontier, explored, current_state = deque([initial_state]), set(), None
+
+    while frontier:
+        current_state = frontier.pop()
         explored.add(current_state.config)
         max_search_depth = max(max_search_depth, current_state.cost)
         if test_goal(current_state):
             break
-
         for child in reversed(current_state.expand()):
             if child.config not in explored:
-                stack.append(child)
+                frontier.append(child)
                 explored.add(child.config)
         nodes_expanded += 1
 
-    running_time = time.time() - start_time
-    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
-        2**20
-    )
     if not current_state:
-        print("Could not solve puzzle!")
-    else:
-        writeOutput(
-            current_state,
-            str(nodes_expanded),
-            str(current_state.cost),
-            str(max_search_depth),
-            str(running_time),
-            str(max_ram_usage),
-        )
-    return
+        return None
+    return current_state, nodes_expanded, current_state.cost, max_search_depth
 
 
 def A_star_search(initial_state):
     """A * search"""
-    start_ram, start_time = (
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-        time.time(),
-    )
+
     nodes_expanded = max_search_depth = 0
-    frontier, explored, current_state = PrioritySet(), set(), None
-    frontier.add((0, initial_state))
+    frontier, explored, current_state = [], set(), None
+    heapq.heappush(frontier, (0, initial_state))
 
     while frontier:
-        _, current_state = frontier.get()
-
+        _, current_state = heapq.heappop(frontier)
+        max_search_depth = max(max_search_depth, current_state.cost)
         explored.add(current_state.config)
-
         if test_goal(current_state):
             break
-
         for child in current_state.expand():
             if child.config not in explored:
-                explored.add(child.config)
                 estimated_cost = calculate_total_cost(child) + child.cost
-                frontier.add((estimated_cost, child))
-
+                explored.add(child.config)
+                heapq.heappush(frontier, (estimated_cost, child))
         nodes_expanded += 1
 
-    running_time = time.time() - start_time
-    max_ram_usage = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram) / (
-        2**20
-    )
     if not current_state:
-        print("Could not solve puzzle!")
-    else:
-        search_depth = current_state.cost
-        writeOutput(
-            current_state,
-            str(nodes_expanded),
-            str(search_depth),
-            str(max_search_depth),
-            str(running_time),
-            str(max_ram_usage),
-        )
-    return
+        return None
+    return current_state, nodes_expanded, current_state.cost, max_search_depth
 
 
 def calculate_total_cost(state):
     """calculate the total estimated cost of a state"""
+
     estimated_cost = 0
     for idx, value in enumerate(state.config):
-        if value == "0":
-            continue
-        estimated_cost += calculate_manhattan_dist(idx, int(value), state.n)
+        if value != "0":
+            estimated_cost += calculate_manhattan_dist(idx, int(value), state.n)
     return estimated_cost
 
 
@@ -368,7 +249,7 @@ def calculate_manhattan_dist(idx, value, n):
 
 def test_goal(puzzle_state):
     """test the state is the goal state or not"""
-    ### STUDENT CODE GOES HERE ###
+
     return puzzle_state.config == goal_state
 
 
@@ -388,14 +269,28 @@ def main():
         )
 
     hard_state = PuzzleState(begin_state, board_size)
-    start_time = time.time()
+    start_ram, start_time, results = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        time.time(),
+        None,
+    )
 
     if search_mode == "bfs":
-        bfs_search(hard_state)
+        results = bfs_search(hard_state)
     elif search_mode == "dfs":
-        dfs_search(hard_state)
+        results = dfs_search(hard_state)
     elif search_mode == "ast":
-        A_star_search(hard_state)
+        results = A_star_search(hard_state)
+
+    running_time, max_ram_usage = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - start_ram
+    ) / (2**20), (time.time() - start_time)
+
+    if not results:
+        print("Puzzle is unsolvable!")
+    else:
+        write_output(results, running_time, max_ram_usage)
+
     end_time = time.time()
     print("Program completed in %.3f second(s)" % (end_time - start_time))
 
