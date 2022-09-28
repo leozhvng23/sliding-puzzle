@@ -19,7 +19,7 @@ class PuzzleState(object):
         self, config, n, parent=None, action="Initial", cost=0, blank_index=-1
     ):
         """
-        :param config->str: Represents the n*n board, for e.g. [0,1,2,3,4,5,6,7,8] represents the goal state.
+        :param config->List(int): Represents the n*n board, for e.g. [0,1,2,3,4,5,6,7,8] represents the goal state.
         :param n->int : Size of the board
         :param parent->PuzzleState
         :param action->string
@@ -35,8 +35,7 @@ class PuzzleState(object):
         self.action = action
         self.config = config
         self.children = []
-        # Get the index and (row, col) of empty block
-        self.blank_index = blank_index if blank_index > -1 else self.config.index("0")
+        self.blank_index = blank_index if blank_index > -1 else self.config.index(0)
 
     def __lt__(self, other):
         return self.cost < other.cost
@@ -44,21 +43,17 @@ class PuzzleState(object):
     def display(self):
         """Display this Puzzle state as a n*n board"""
         # need to change this to new format
-        tmp = list(int(c) for c in self.config)
-
         for i in range(self.n):
-            print(tmp[self.n * i : self.n * (i + 1)])
+            print(self.config[self.n * i : self.n * (i + 1)])
 
     def move_helper(self, position, move):
         """
         Helper function for move
         :return a PuzzleState with the new configuration
         """
-        new_config = list(self.config)
-        new_config[self.blank_index], new_config[position] = new_config[position], "0"
-        new_state = PuzzleState(
-            "".join(new_config), self.n, self, move, self.cost + 1, position
-        )
+        new_config = self.config[:]
+        new_config[self.blank_index], new_config[position] = new_config[position], 0
+        new_state = PuzzleState(new_config, self.n, self, move, self.cost + 1, position)
         self.children.append(new_state)
         return new_state
 
@@ -169,8 +164,8 @@ def bfs_search(initial_state):
             if test_goal(current_state):
                 found = True
                 break
-            if current_state.config not in explored:
-                explored.add(current_state.config)
+            if tuple(current_state.config) not in explored:
+                explored.add(tuple(current_state.config))
                 for child in current_state.expand():
                     frontier.append(child)
         if found:
@@ -191,14 +186,14 @@ def dfs_search(initial_state):
 
     while frontier:
         current_state = frontier.pop()
-        explored.add(current_state.config)
+        explored.add(tuple(current_state.config))
         max_search_depth = max(max_search_depth, current_state.cost)
         if test_goal(current_state):
             break
         for child in reversed(current_state.expand()):
-            if child.config not in explored:
+            if tuple(child.config) not in explored:
                 frontier.append(child)
-                explored.add(child.config)
+                explored.add(tuple(child.config))
         nodes_expanded += 1
 
     if not current_state:
@@ -216,13 +211,13 @@ def A_star_search(initial_state):
     while frontier:
         _, current_state = heapq.heappop(frontier)
         max_search_depth = max(max_search_depth, current_state.cost)
-        explored.add(current_state.config)
+        explored.add(tuple(current_state.config))
         if test_goal(current_state):
             break
         for child in current_state.expand():
-            if child.config not in explored:
+            if tuple(child.config) not in explored:
                 estimated_cost = calculate_total_cost(child) + child.cost
-                explored.add(child.config)
+                explored.add(tuple(child.config))
                 heapq.heappush(frontier, (estimated_cost, child))
         nodes_expanded += 1
 
@@ -236,7 +231,7 @@ def calculate_total_cost(state):
 
     estimated_cost = 0
     for idx, value in enumerate(state.config):
-        if value != "0":
+        if value != 0:
             estimated_cost += calculate_manhattan_dist(idx, int(value), state.n)
     return estimated_cost
 
@@ -253,21 +248,20 @@ def test_goal(puzzle_state):
     return puzzle_state.config == goal_state
 
 
-goal_state = ""
+goal_state = []
 # Main Function that reads in Input and Runs corresponding Algorithm
 def main():
     global goal_state
     search_mode = sys.argv[1].lower()
-    begin_state = sys.argv[2].replace(",", "")
+    begin_state = sys.argv[2].split(",")
     board_size = int(math.sqrt(len(begin_state)))
-    goal_state = "".join([str(x) for x in range(board_size * board_size)])
+    goal_state = [v for v in range(board_size * board_size)]
 
     # check if input is valid
-    if set(map(int, sys.argv[2].split(","))) != set(range(board_size * board_size)):
-        raise Exception(
-            "Config contains invalid/duplicate entries : ", sys.argv[2].split(",")
-        )
+    if set(map(int, begin_state)) != set(range(board_size * board_size)):
+        raise Exception("Config contains invalid/duplicate entries: ", begin_state)
 
+    begin_state = list(map(int, begin_state))
     hard_state = PuzzleState(begin_state, board_size)
     start_ram, start_time, results = (
         resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
