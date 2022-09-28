@@ -214,7 +214,7 @@ def A_star_search(initial_state):
         explored.add(tuple(current_state.config))
         if test_goal(current_state):
             break
-        for child in current_state.expand():
+        for child in reversed(current_state.expand()):
             if tuple(child.config) not in explored:
                 estimated_cost = calculate_total_cost(child) + child.cost
                 explored.add(tuple(child.config))
