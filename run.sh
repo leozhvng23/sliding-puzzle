@@ -1,5 +1,5 @@
 #!/bin/zsh
 
-python puzzle.py $1 $2
-bat output.txt
+python3 puzzle.py $1 $2
+cat output.txt
 rm output.txt
