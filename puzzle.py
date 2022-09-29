@@ -2,11 +2,11 @@ from __future__ import division
 from __future__ import print_function
 from collections import deque
 
-import heapq
 import sys
 import math
 import time
 import resource
+import queue
 
 ## The Class that Represents the Puzzle
 class PuzzleState(object):
@@ -38,7 +38,7 @@ class PuzzleState(object):
         self.blank_index = blank_index if blank_index > -1 else self.config.index(0)
 
     def __lt__(self, other):
-        return self.cost < other.cost
+        return self.cost > other.cost
 
     def display(self):
         """Display this Puzzle state as a n*n board"""
@@ -205,20 +205,20 @@ def A_star_search(initial_state):
     """A * search"""
 
     nodes_expanded = max_search_depth = 0
-    frontier, explored, current_state = [], set(), None
-    heapq.heappush(frontier, (0, initial_state))
+    frontier, explored, current_state = queue.PriorityQueue(), set(), None
+    frontier.put((0, initial_state))
 
     while frontier:
-        _, current_state = heapq.heappop(frontier)
+        _, current_state = frontier.get()
         max_search_depth = max(max_search_depth, current_state.cost)
         explored.add(tuple(current_state.config))
         if test_goal(current_state):
             break
         for child in reversed(current_state.expand()):
-            if tuple(child.config) not in explored:
-                estimated_cost = calculate_total_cost(child) + child.cost
-                explored.add(tuple(child.config))
-                heapq.heappush(frontier, (estimated_cost, child))
+            state = tuple(child.config)
+            if state not in explored:
+                explored.add(state)
+                frontier.put((calculate_total_cost(child) + child.cost, child))
         nodes_expanded += 1
 
     if not current_state:
